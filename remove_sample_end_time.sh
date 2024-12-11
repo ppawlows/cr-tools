@@ -12,8 +12,22 @@ url="$1"
 # Remove the sampleEndTime parameter
 modified_url=$(echo "$url" | sed -E 's/(&|\?)sampleEndTime=[^&]*//g' | sed -E 's/&{2,}/&/g' | sed -E 's/\?$//g')
 
-# Calculate the date 7 days ago at midnight
-sample_start_time=$(date -d "-7 days" '+%Y-%m-%d 00:00:00')
+# Detect the OS and calculate 7 days ago at midnight
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  # macOS: Use BSD date
+  sample_start_time=$(date -v-7d '+%Y-%m-%d 00:00:00')
+elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+  # Linux: Use GNU date
+  if command -v date &>/dev/null && date --version 2>/dev/null | grep -q "GNU"; then
+    sample_start_time=$(date -d "-7 days" '+%Y-%m-%d 00:00:00')
+  else
+    echo "Error: Unsupported date command on Linux. Please use a GNU-compatible date command."
+    exit 1
+  fi
+else
+  echo "Unsupported OS: $OSTYPE"
+  exit 1
+fi
 
 # Replace or append sampleStartTime with the calculated value
 if [[ "$modified_url" =~ sampleStartTime= ]]; then
@@ -26,7 +40,7 @@ else
   modified_url="${modified_url}${separator}sampleStartTime=$(echo $sample_start_time | sed 's/ /%20/g')"
 fi
 
-# Determine the OS
+# Determine the clipboard tool and copy the URL
 if [[ "$OSTYPE" == "darwin"* ]]; then
   # macOS
   echo "$modified_url" | pbcopy
@@ -44,7 +58,7 @@ elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
     exit 1
   fi
 else
-  echo "Unsupported OS: $OSTYPE"
+  echo "Unsupported OS for clipboard copying: $OSTYPE"
   exit 1
 fi
 
