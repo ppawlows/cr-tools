@@ -12,6 +12,20 @@ url="$1"
 # Remove the sampleEndTime parameter
 modified_url=$(echo "$url" | sed -E 's/(&|\?)sampleEndTime=[^&]*//g' | sed -E 's/&{2,}/&/g' | sed -E 's/\?$//g')
 
+# Calculate the date 7 days ago at midnight
+sample_start_time=$(date -d "-7 days" '+%Y-%m-%d 00:00:00')
+
+# Replace or append sampleStartTime with the calculated value
+if [[ "$modified_url" =~ sampleStartTime= ]]; then
+  # Update existing sampleStartTime parameter
+  modified_url=$(echo "$modified_url" | sed -E "s/(sampleStartTime=)[^&]*/\1$(echo $sample_start_time | sed 's/ /%20/g')/")
+else
+  # Append sampleStartTime if it doesn't exist
+  separator="&"
+  [[ "$modified_url" != *"?"* ]] && separator="?"
+  modified_url="${modified_url}${separator}sampleStartTime=$(echo $sample_start_time | sed 's/ /%20/g')"
+fi
+
 # Determine the OS
 if [[ "$OSTYPE" == "darwin"* ]]; then
   # macOS
